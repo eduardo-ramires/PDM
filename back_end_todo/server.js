@@ -1,20 +1,19 @@
 const express = require('express');
-const { Pool } = require('pg'); // MUDANÇA: Importa o 'pg'
+const mysql = require('mysql2/promise');
 const cors = require('cors');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000; // Porta do seu Banco de Dados
 
 app.use(cors()); 
 app.use(express.json()); 
 
-// MUDANÇA: Configuração do Pool do PostgreSQL
-// O 'Pool' vai ler automaticamente a variável 'DATABASE_URL' do Render
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
-    // Se estiver a rodar localmente, crie um .env com DATABASE_URL="postgres://seu_user:sua_senha@localhost:5432/seu_banco"
-});
-
+// Altere os dados conforme a sua maquina
+const dbConfig = {
+    host: 'localhost',
+    user: 'root', //Usuario do seu banco de dados
+    password: 'Edududu@11062005', // Senha do seu banco de dados
+    database: 'todo_ubi' // Nome do seu banco de dados
+};
 
 app.post('/api/tarefas', async (req, res) => {
     const { descricao, data_final, prioridade, status } = req.body;
@@ -22,15 +21,15 @@ app.post('/api/tarefas', async (req, res) => {
     if (!descricao) {
         return res.status(400).json({ message: 'A descrição da tarefa é obrigatória.' });
     }
-    
-    // MUDANÇA: Sintaxe SQL e placeholders ($1, $2, ...) e RETURNING id
-    const sql = 'INSERT INTO tarefas (descricao, data_final, prioridade, status) VALUES ($1, $2, $3, $4) RETURNING id';
-    
     try {
-        const [result] = await pool.query(sql, [descricao, data_final || null, prioridade || 0, status || 0]);
+        const connection = await mysql.createConnection(dbConfig);
+        const sql = 'INSERT INTO tarefas (descricao, data_final, prioridade, status) VALUES (?, ?, ?, ?)';
+        const [result] = await connection.execute(sql, [descricao, data_final || null, prioridade || 0, status || 0]);
+        
+        await connection.end();
         
         res.status(201).json({ 
-            id: result.rows[0].id, // MUDANÇA: Pega o ID retornado
+            id: result.insertId,
             descricao,
             data_final,
             prioridade,
@@ -43,15 +42,16 @@ app.post('/api/tarefas', async (req, res) => {
 });
 
 app.get('/api/tarefas', async (req, res) => {
-    console.log('1. Rota GET /api/tarefas foi chamada.');
+    console.log('1. Rota GET /api/tarefas foi chamada.'); // LOG 1
     try {
-        // MUDANÇA: Usa o pool e 'query', o resultado está em 'rows'
-        const result = await pool.query('SELECT * FROM tarefas ORDER BY prioridade DESC');
-        
-        console.log('2. Dados recebidos do banco:', result.rows);
-        res.json(result.rows); // MUDANÇA: Envia result.rows
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT * FROM tarefas ORDER BY prioridade DESC');
+        await connection.end();
+
+        console.log('2. Dados recebidos do banco:', rows); // LOG 2
+        res.json(rows);
     } catch (error) {
-        console.error('3. ERRO na rota GET:', error);
+        console.error('3. ERRO na rota GET:', error); // LOG 3
         res.status(500).json({ message: 'Erro ao buscar produtos.' });
     }
 });
@@ -63,15 +63,14 @@ app.put('/api/tarefas/:id', async (req, res) => {
     if (!descricao) {
         return res.status(400).json({ message: 'A descrição não pode ser vazia.' });
     }
-
-    // MUDANÇA: Placeholders de $1 a $5
-    const sql = 'UPDATE tarefas SET descricao = $1, data_final = $2, prioridade = $3, status = $4 WHERE id = $5';
-        
     try {
-        const result = await pool.query(sql, [descricao, data_final, prioridade, status, id]);
+        const connection = await mysql.createConnection(dbConfig);
+        const sql = 'UPDATE tarefas SET descricao = ?, data_final = ?, prioridade = ?, status = ? WHERE id = ?';
+        
+        const [result] = await connection.execute(sql, [descricao, data_final, prioridade, status, id]);
+        await connection.end();
 
-        // MUDANÇA: usa 'rowCount' em vez de 'affectedRows'
-        if (result.rowCount === 0) { 
+        if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Tarefa não encontrada para atualização.' });
         }
 
@@ -86,11 +85,11 @@ app.delete('/api/tarefas/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
-        // MUDANÇA: Placeholder $1
-        const result = await pool.query('DELETE FROM tarefas WHERE id = $1', [id]);
-        
-        // MUDANÇA: usa 'rowCount'
-        if (result.rowCount === 0) { 
+        const connection = await mysql.createConnection(dbConfig);
+        const [result] = await connection.execute('DELETE FROM tarefas WHERE id = ?', [id]);
+        await connection.end();
+
+        if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Tarefa não encontrada para exclusão.' });
         }
 
@@ -101,7 +100,7 @@ app.delete('/api/tarefas/:id', async (req, res) => {
     }
 });
 
-// Sem mudanças aqui
-app.listen(PORT, () => {
-  console.log(`Servidor a rodar na porta ${PORT}`);
+// Inicia o servidor
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor da API rodando em http://localhost:${PORT} e na sua rede local.`);
 });
