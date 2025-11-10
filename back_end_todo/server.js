@@ -1,23 +1,24 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
-//...
+
 const app = express();
-// Em vez de: const PORT = 3000;
-const PORT = process.env.PORT || 3000; // Usa a porta do Render ou 3000 localmente
-
-
+// A porta TAMBÉM deve vir do ambiente
+const PORT = process.env.PORT || 3000; // O Render vai definir a porta
 
 app.use(cors()); 
 app.use(express.json()); 
 
-// Altere os dados conforme a sua maquina
+// --- ESTA É A MUDANÇA IMPORTANTE ---
+// O seu código vai ler as variáveis do ambiente do Render
 const dbConfig = {
-    host: 'localhost',
-    user: 'root', //Usuario do seu banco de dados
-    password: 'Edududu@11062005', // Senha do seu banco de dados
-    database: 'todo_ubi' // Nome do seu banco de dados
+    host: process.env.DB_HOST,       // Virá do Render
+    user: process.env.DB_USER,       // Virá do Render
+    password: process.env.DB_PASSWORD, // Virá do Render
+    database: process.env.DB_NAME      // Virá do Render
 };
+
+
 
 app.post('/api/tarefas', async (req, res) => {
     const { descricao, data_final, prioridade, status } = req.body;
