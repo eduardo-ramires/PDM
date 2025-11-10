@@ -1,0 +1,11 @@
+# Ignorar node_modules de ambos
+backend/node_modules
+frontend/node_modules
+
+# Ignorar arquivos .env (NUNCA envie senhas!)
+backend/.env
+frontend/.env
+
+# Ignorar pastas de build do Quasar
+frontend/dist
+frontend/.quasar
