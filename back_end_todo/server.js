@@ -1,8 +1,12 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
+//...
 const app = express();
-const PORT = 3000; // Porta do seu Banco de Dados
+// Em vez de: const PORT = 3000;
+const PORT = process.env.PORT || 3000; // Usa a porta do Render ou 3000 localmente
+
+
 
 app.use(cors()); 
 app.use(express.json()); 
@@ -100,7 +104,6 @@ app.delete('/api/tarefas/:id', async (req, res) => {
     }
 });
 
-// Inicia o servidor
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor da API rodando em http://localhost:${PORT} e na sua rede local.`);
+app.listen(PORT, () => {
+  console.log(`Servidor a rodar na porta ${PORT}`);
 });
